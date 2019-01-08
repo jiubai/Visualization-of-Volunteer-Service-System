@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<!--浏览器一页长宽1366*768-->
+<html lang="en" style="overflow: hidden">
+<head>
+    <meta charset="UTF-8">
+    <title>Show</title>
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+    <link href='http://fonts.googleapis.com/css?family=Oleo+Script' rel='stylesheet' type='text/css'>
+    <script src="../static/js/bootstrap.min.js"></script>
+    <script src="../static/js/jquery-3.3.1.min.js"></script>
+    <script src="../static/js/echarts.min.js"></script>
+    <script src="../static/js/echarts-liquidfill.js"></script>
+    <script src="../static/js/echarts-wordcloud.min.js"></script>
+    <script src="../static/js/china.js"></script>
+</head>
+<body background="../static/img/3.jpg"
+      style="background-size: cover; font-family: 'Oleo Script', cursive;">
+    <nav class="navbar navbar-inverse" role="navigation" style="background: #78828c;">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="{{ url_for('Main_Show') }}">
+                    <img src="../static/img/logo.jpg" alt="Logo">
+                    <span class="font-weight-bold" style="color: #e9ecef;">首页_玖</span>
+                </a>
+            </div>
+            <div>
+                <span id="show_time" class="navbar-text" style="color: #e9ecef;"></span>
+            </div>
+        </div>
+    </nav>
+    <div class="row" style="height: 430px;">
+        <div class="col-md-3" style="width: 200px;height:430px;">
+            <div class="row" style="height:230px">{{ echarts_container(wordcloud) }}</div>
+            <div class="row" style="height:200px">{{ echarts_container(radar) }}</div>
+        </div>
+        <div id="Main_Map" class="col-md-5.5" style="width:570px; height:430px;"></div>
+        <div class="col-md-3" style="width: 430px;height:430px;">
+            <div class="row" style="width: 430px; height:230px">{{ echarts_container(Age) }}</div>
+            <div class="row">
+                <div id="Gauge" class="col-md-6" style="width:230px; height:200px;"></div>
+                <div id="Lquid" class="col-md-6" style="width:230px; height:200px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3" style="width: 200px;height:300px;">{{ echarts_container(pie) }}</div>
+        <div class="col-md-5.5" style="width:570px; height:300px;">{{ echarts_container(line) }}</div>
+        <div class="col-md-3.5" style="width: 430px;height:318px;">{{ echarts_container(funnel) }}</div>
+    </div>
+    <script type="text/javascript">
+        var myChart = echarts.init(document.getElementById('Main_Map'));
+        var name_title = "志愿数据全国分布";
+        var subname = '缺省港澳台';
+        var nameColor = "rgb(55, 75, 113)";
+        var name_fontFamily = '等线';
+        var subname_fontSize = 15;
+        var name_fontSize = 18;
+        var mapName = 'china';
+        var Province_China = eval('{{Province_China|safe}}');
+        var opp_China = eval('{{opp_China|safe}}');
+        var org_China = eval('{{org_China|safe}}');
+        var Province_ALL_China = eval('{{Province_ALL_China|safe}}');
+        var geoCoordMap = {};
+
+        /*获取地图数据*/
+        myChart.showLoading();
+        var mapFeatures = echarts.getMap(mapName).geoJson.features;
+        myChart.hideLoading();
+        mapFeatures.forEach(function(v) {
+            // 地区名称
+            var name = v.properties.name;
+            // 地区经纬度
+            geoCoordMap[name] = v.properties.cp;
+        });
+
+        var convertData = function(data) {
+            var res = [];
+            for (var i = 0; i < data.length; i++) {
+                var geoCoord = geoCoordMap[data[i].name];
+                if (geoCoord) {
+                    res.push({
+                        name: data[i].name,
+                        value: geoCoord.concat(data[i].value),
+                    });
+                }
+            }
+            return res;
+        };
+        function tooltipCharts(vol, num ) {
+            var myChart = echarts.init(document.getElementById('tooltipPieId'));
+            var option = {
+                    title: {
+                        text: (vol/num * 100).toFixed(2) +'%',
+                        x: 'center',
+                        y: 'center',
+                        textStyle: {
+                            fontWeight: 'normal',
+                            color: '#0580f2',
+                            fontSize: '13'
+                        }
+                    },
+                    color: ['rgba(176, 212, 251, 1)'],
+                    series: [{
+                        name: 'Proportion',
+                        type: 'pie',
+                        clockWise: true,
+                        radius: ['50%', '66%'],
+                        itemStyle: {
+                            normal: {
+                                label: {
+                                    show: false
+                                },
+                                labelLine: {
+                                    show: false
+                                }
+                            }
+                        },
+                        hoverAnimation: false,
+                        data: [{
+                            value: vol,
+                            name: '志愿者数',
+                            itemStyle: {
+                                normal: {
+                                    color: { // 完成的圆环的颜色
+                                        colorStops: [{
+                                            offset: 0,
+                                            color: '#00cefc' // 0% 处的颜色
+                                        }, {
+                                            offset: 1,
+                                            color: '#367bec' // 100% 处的颜色
+                                        }]
+                                    },
+                                    label: {
+                                        show: false
+                                    },
+                                    labelLine: {
+                                        show: false
+                                    }
+                                }
+                            }
+                        }, {
+                            name: '当地人口数',
+                            value: num
+                        }]
+                    }]
+                };
+            myChart.setOption(option);
+        }
+
+        option = {
+            title: {
+                text: name_title,
+                subtext: subname,
+                x: 'center',
+                textStyle: {
+                    color: nameColor,
+                    fontFamily: name_fontFamily,
+                    fontSize: name_fontSize
+                },
+                subtextStyle:{
+                    fontSize:subname_fontSize,
+                    fontFamily:name_fontFamily
+                }
+            },
+            tooltip: {
+                trigger: 'item',
+                textStyle: {
+                    color: '#000',
+                    decoration: 'none',
+                    fontSize: 3,
+                },
+                formatter: function(params) {
+                    var Province_people, Province_all, Province_opp, Province_org;
+                    for(var i = 0;i<Province_China.length;i++){
+                        if(params.name==Province_China[i].name){
+                            Province_people = Province_China[i].value;
+                        }
+                    }
+                    for(var i = 0;i<Province_ALL_China.length;i++){
+                        if(params.name==Province_ALL_China[i].name){
+                            Province_all = Province_ALL_China[i].value;
+                        }
+                    }
+                    for(var i = 0;i<org_China.length;i++){
+                        if(params.name==org_China[i].name){
+                            Province_org = org_China[i].value;
+                        }
+                    }
+                    for(var i = 0;i<opp_China.length;i++){
+                        if(params.name==opp_China[i].name){
+                            Province_opp = opp_China[i].value;
+                        }
+                    }
+                    var toolTiphtml = '';
+                    toolTiphtml =
+                    '<div style="height:200px;width:200px;border-radius:5px;background:#fffdfb;box-shadow:0 0 10px 5px #aaa">' +
+                    '    <div style="height:20px;width:100%;border-radius:5px;background:#fffdfb;border-bottom:1px solid #F0F0F0">' +
+                    '        <span style="line-height:20px;margin-left:18px">' + params.name + '</span>' +
+                    '    </div>' +
+                    '    <div style="height:110px;width:100%;background:#fff">' +
+                    '        <div style="padding-left:18px;padding-top:22px">' +
+                    '            <span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:rgba(92,169,235,1)"></span> ' +
+                    '            <span>志愿者总数:</span>' +
+                    '            <span>' + Province_people + '</span>' +
+                    '        </div>' +
+                    '        <div style="padding-left:18px;padding-top:14px">' +
+                    '            <span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:rgba(92,169,235,1)"></span> ' +
+                    '            <span>志愿项目总数:</span>' +
+                    '            <span>' + Province_opp + '</span>' +
+                    '        </div>' +
+                    '        <div style="padding-left:18px;padding-top:14px">' +
+                    '            <span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:rgba(92,169,235,1)"></span> ' +
+                    '            <span>志愿团体总数:</span>' +
+                    '            <span>' + Province_org + '</span>' +
+                    '        </div>' +
+                    '        <div style="padding-left:18px;padding-top:14px">' +
+                    '            <span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:rgba(92,169,235,1)"></span> ' +
+                    '            <span>志愿者占当地人口比例:</span>' +
+                    '        </div>' +
+                    '    </div>' +
+                    '    <div id="tooltipPieId" style="height:70px;width:100%;border-radius:0 0 5px 0;background:#fff"></div>' +
+                    '</div>';
+                    setTimeout(function() {
+                        tooltipCharts(Province_people, Province_all);}, 10);
+                    return toolTiphtml;
+                }
+            },
+            visualMap: {
+                show: true,
+                min: 16328,
+                max: 9389748,
+                left: 'left',
+                top: 'bottom',
+                text: ['志愿者数', ''], // 文本，默认为数值文本
+                calculable: true,
+                seriesIndex: [1],
+                inRange: {
+                    color: ['#b39cf5', '#67105b']
+                    // color: ['#ffc0cb', '#800080'] // 红紫
+                    // color: ['#3C3B3F', '#605C3C'] // 黑绿
+                    // color: ['#0f0c29', '#302b63', '#24243e'] // 黑紫黑
+                    // color: ['#23074d', '#cc5333'] // 紫红
+                    // color: ['#1488CC', '#2B32B2'] // 浅蓝
+                }
+            },
+            geo: {
+                show: true,
+                map: mapName,
+                roam: true,
+                itemStyle: {
+                    normal: {
+                        areaColor: '#031525',
+                        borderColor: '#3B5077',
+                    },
+                    emphasis: {
+                        areaColor: '#2B91B7',
+                    }
+                }
+            },
+            series: [
+                {
+                    name: 'opp',
+                    type: 'scatter',
+                    coordinateSystem: 'geo',
+                    symbol: 'pin',  //气泡
+                    data: convertData(opp_China),
+                    symbolSize: function(val) {
+                        return val[2] / 134625 * 70;
+                    },
+                    label: {
+                        normal: {
+                            formatter: '{b}',   //显示数据名
+                            show: true,
+                            textStyle: {
+                                color: '#fff9ff',
+                                fontSize: 9,
+                            }
+                        },
+                        emphasis: {
+                            show: true
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: '#F62157', //标志颜色
+                        }
+                    },
+                    zlevel: 6
+                },
+                {
+                    type: 'map',
+                    map: mapName,
+                    geoIndex: 0,
+                    aspectScale: 0.75, //长宽比
+                    showLegendSymbol: false, // 存在legend时显示
+                    label: {
+                        normal: {
+                            show: true
+                        },
+                        emphasis: {
+                            show: false,
+                            textStyle: {
+                                color: '#fff'
+                            }
+                        }
+                    },
+                    roam: true,
+                    itemStyle: {
+                        normal: {
+                            areaColor: '#031525',
+                            borderColor: '#772e35',
+                        },
+                        emphasis: {
+                            areaColor: '#63b738'
+                        }
+                    },
+                    animation: false,
+                    data: Province_China
+                },
+                {
+                    name: 'org',
+                    type: 'effectScatter',
+                    coordinateSystem: 'geo',
+                    data: convertData(org_China),
+                    symbolSize: function(val) {
+                        return val[2] / 15707 * 20;
+                    },
+                    showEffectOn: 'render',
+                    rippleEffect: {
+                        brushType: 'stroke'
+                    },
+                    hoverAnimation: true,
+                    label: {
+                        normal: {
+                            formatter: '{b}',
+                            show: false
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: 'yellow',
+                            shadowBlur: 10,
+                            shadowColor: 'yellow'
+                        }
+                    },
+                    zlevel: 1
+                }
+            ]
+        };
+        myChart.on('click', function(params) {  //设置点击事件
+            var province = params.name; //获取选中省市的省市名称
+            switch(province) {
+                case '北京':
+                    location.href = 'Login';
+                    break;
+                default:
+                    break;
+            }
+        });
+        myChart.setOption(option);
+    </script>
+    <script type="text/javascript">
+        var myChart = echarts.init(document.getElementById('Gauge'));
+        var rate = 0.6691;
+        var linear_color = {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [{
+                offset: 0,
+                color: '#6959CD'
+            }, {
+                offset: 1,
+                color: '#ede0ff'
+            }]
+        };
+        var option = {
+            title: {
+                text: "活跃比例",
+                textStyle: {
+                    color: '#8f99f5',
+                    fontSize: 12,
+                    fontWeight: 'bold'
+                },
+                left: 'center',
+                bottom: '20%'
+            },
+            series: [{
+                type: 'pie',
+                hoverAnimation: false,
+                radius: ['79%', '80%'],
+                startAngle: 225,
+                labelLine: {
+                    show: false
+                },
+                data: [{
+                    value: rate * 270,
+                    label: {
+                        normal: {
+                            show: true,
+                            position: 'center',
+                            formatter: (rate * 100).toFixed(2) + '%',
+                            textStyle: {
+                                color: '#8f99f5',
+                                fontSize: 12,
+                                fontWeight: 'bold'
+                            }
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            borderColor: linear_color,
+                            borderWidth: 20
+                        }
+                    }
+                }, {
+                    value: 270 - rate * 270,
+                    itemStyle: {
+                        normal: {
+                            borderColor: 'rgba(250,250,250,1)',
+                            borderWidth: 5
+                        }
+                    }
+                }, {
+                    value: 90,
+                    itemStyle: {
+                        normal: {
+                            color: "rgba(0,0,0,0)"
+                        }
+                    }
+                }],
+            }]
+        };
+        myChart.setOption(option);
+    </script>
+    <script type="text/javascript">
+        var myChart = echarts.init(document.getElementById('Lquid'));
+        var val1data2 = [{
+                value: 0.062,
+                name: '学生占比',
+                explain: '学生人数：4059392'
+            },
+            {
+                value: 0.938,
+                name: '非学生占比',
+                explain: '非学生人数：61329838'
+            },];
+
+        var arr = ['middleLost', 0.95, val1data2, '身份认证'];
+
+        option = {
+            title: {
+                top: '45%',
+                left: 'center',
+                text: arr[3],
+                textStyle: {
+                    color: '#333',
+                    fontStyle: 'normal',
+                    fontWeight: 'normal',
+                    fontSize: 12
+                },
+                subtext: '(占所有数据的的' + (arr[1] * 100).toFixed(2) + '%)',
+                subtextStyle: {
+                    color: '#666',
+                    fontSize: 12
+                }
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: function(res) {
+                    console.log(res);
+                    if (res.componentSubType == 'liquidFill') {
+                        return res.seriesName + ': ' + (res.value * 100).toFixed(2) + '%';
+                    } else {
+                        return '<span class="ii" style="background:' + res.color + ' "></span>' + res.name + ':<br/> ' + res.data.value + ' (' + res.percent + '%)<br/> ' + res.data.explain;
+                    }
+                }
+            },
+            series: [{
+                    type: 'liquidFill',
+                    itemStyle: {
+                        normal: {
+                            opacity: 0.8,
+                            shadowBlur: 0,
+                            shadowColor: 'blue'
+                        }
+                    },
+                    name: arr[3],
+                    data: [{
+                        value: 0.95,
+                        itemStyle: {
+                            normal: {
+                                color: '#53d5ff',
+                                opacity: 1
+                            }
+                        }
+                    }],
+                    background: '#fff',
+                    color: ['#53d5ff'],
+                    center: ['50%', '50%'],
+                    backgroundStyle: {
+                        color: '#fff'
+                    },
+                    label: {
+                        normal: {
+                            formatter: '',
+                            textStyle: {
+                                fontSize: 10
+                            }
+                        }
+                    },
+                    outline: {
+                        itemStyle: {
+                            borderColor: '#86c5ff',
+                            borderWidth: 10
+                        },
+                        borderDistance: 0
+                    }
+                },
+                {
+                    type: 'pie',
+                    radius: ['100%', '80%'],
+                    hoverAnimation: false, ////设置饼图默认的展开样式
+                    label: {
+                        show: false,
+                        normal: {
+                            show: false,
+                            position: 'center'
+                        },
+                    },
+                    labelLine: {
+                        normal: {
+                            show: false
+                        }
+                    },
+                    itemStyle: { // 此配置
+                        normal: {
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                        },
+                        emphasis: {
+                            borderWidth: 0,
+                            shadowBlur: 2,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    },
+                    data: arr[2]
+                }
+            ]
+        };
+        myChart.setOption(option);
+    </script>
+    <script type="text/javascript" src="../static/js/canvas-nest.js"></script>
+    <script>  
+        //这里代码多了几行，但是不会延迟显示，速度比较好，格式可以自定义，是理想的时间显示
+        setInterval("fun(show_time)",1);
+        function fun(timeID){ 
+            var date = new Date();  //创建对象  
+            var y = date.getFullYear();     //获取年份  
+            var m =date.getMonth()+1;   //获取月份  返回0-11  
+            var d = date.getDate(); // 获取日  
+            var ww = ' 星期'+'日一二三四五六'.charAt(new Date().getDay()) ;//星期几
+            var h = date.getHours();  //时
+            var minute = date.getMinutes()  //分
+            var s = date.getSeconds(); //秒
+            var sss = date.getMilliseconds() ; //毫秒
+            if(m<10){m = "0"+m;}
+            if(d<10){d = "0"+d;}
+            if(h<10){h = "0"+h;}
+            if(minute<10){minute = "0"+minute;}
+            document.getElementById(timeID.id).innerHTML =  y+"-"+m+"-"+d+"  "+h+":"+minute+"  "+ww;
+          }
+    </script> 
+    {{ echarts_js_content(Age) }}
+    {{ echarts_js_content(funnel) }}
+    {{ echarts_js_content(wordcloud) }}
+    {{ echarts_js_content(radar) }}
+    {{ echarts_js_content(pie) }}
+    {{ echarts_js_content(line) }}
+</body>
+</html>

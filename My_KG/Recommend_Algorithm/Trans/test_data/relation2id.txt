@@ -1,0 +1,7 @@
+University_Is,0
+Is_Managed_By,1
+Is_Located_In,2
+Service_Tag_Is,3
+Is_Organized_By,4
+Participate_In,5
+Is_Member_Of,6
