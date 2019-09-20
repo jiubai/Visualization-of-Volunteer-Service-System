@@ -2,7 +2,7 @@
 <html lang="en" style="overflow: hidden">
 <head>
     <meta charset="UTF-8">
-    <title>Person_Page</title>
+    <title>All_Show_Page</title>
     <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
     <link rel="stylesheet" href="../static/css/nifty.min.css"/>
     <link rel="stylesheet" href="../static/css/nifty-demo-icons.min.css"/>
@@ -37,24 +37,9 @@
         <div class="boxed">
             <div id="content-container">
                 <div id="page-content">
-					<h3 class="text-main pad-btm bord-btm">个人/检索结果-关系可视化</h3>
+					<h3 class="text-main pad-btm bord-btm">志愿图谱全貌可视化</h3>
                     <div class="row">
-                        <div class="col-lg-6"></div>
-                        <div class="col-lg-2"></div>
-                        <div class="col-lg-4">
-                            <form action="/Login" id="lg-form" name="lg-form" method="post">
-                                <div class="input-group">
-                                    <input type="text" name="username" id="username" class="form-control input-lg" placeholder="请输入你要检索的志愿者..."/>
-                                    <button class="input-group-addon btn btn-mint" type="submit" id="login">搜索</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="row" style="height: 40px;"></div>
-                    <div class="row" >
-                        <div class="col-lg-6" style="height: 400px;" id="Person_Relation"></div>
-                        <div class="col-lg-2"></div>
-                        <div class="col-lg-4"></div>
+                        <div class="col-lg-12" style="height: 600px;" id="Person_Relation"></div>
                     </div>
                 </div>
             </div>
@@ -165,7 +150,8 @@
                     repulsion: 500, // 节点之间的斥力因子。支持数组表达斥力范围，值越大斥力越大。
                     gravity: 0.02, // 节点受到的向中心的引力因子。该值越大节点越往中心点靠拢。
                     edgeLength: 200, // 边的两个节点之间的距离，这个距离也会受 repulsion影响 。值越大则长度越长
-                    layoutAnimation: true // 因为力引导布局会在多次迭代后才会稳定，这个参数决定是否显示布局的迭代动画
+                    layoutAnimation: true, // 因为力引导布局会在多次迭代后才会稳定，这个参数决定是否显示布局的迭代动画
+                    large: true
                     // 在浏览器端节点数据较多（>100）的时候不建议关闭，布局过程会造成浏览器假死。
                 },
                 roam: true, // 是否开启鼠标缩放和平移漫游。默认不开启，true 为都开启。如果只想要开启缩放或者平移，可以设置成 'scale' 或者 'move'

@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for, jsonify
 from flask.templating import Environment
 import json
 import csv
+import re
 from datetime import timedelta
 from Create_KG.Connect_Server import graph
+from Create_KG.Hanlp_Classfy import Classfy_Question
+from Create_KG.AIML import KGQA_Answer
 from pyecharts.conf import PyEchartsConfig
 from pyecharts.engine import ECHAERTS_TEMPLATE_FUNCTIONS
-from pyecharts import Bar, Funnel, WordCloud, Radar, Pie, Line, Timeline
+from pyecharts import Bar, Funnel, WordCloud, Radar, Pie, Line, Timeline, Scatter
 
 
 # ----- Adapter ---------
@@ -42,7 +45,7 @@ def Main_Show():
 
 @app.route('/Login', methods=['POST', 'GET'])
 def Login():
-    Province_BJ, opp_BJ, org_BJ, BJ_to_Other, Other_to_BJ, timeline = ReadBJMap()
+    Province_BJ, opp_BJ, org_BJ, BJ_to_Other, Other_to_BJ, timeline, timeline_uni = ReadBJMap()
     error = None
     if request.method == 'POST':
         if request.form['username'] != '':
@@ -51,18 +54,206 @@ def Login():
             error = 'Invalid username/password'
     return render_template('login.html', error=error, Province_BJ=json.dumps(Province_BJ),
                            opp_BJ=json.dumps(opp_BJ), org_BJ=json.dumps(org_BJ), BJ_to_Other=json.dumps(BJ_to_Other),
-                           Other_to_BJ=json.dumps(Other_to_BJ), timeline=timeline)
+                           Other_to_BJ=json.dumps(Other_to_BJ), timeline=timeline, timeline_uni=timeline_uni)
 
 
 @app.route('/Person_Page/<login_name>', methods=['POST', 'GET'])
 def Person_Page(login_name):
     nodes, edges = get_graph(login_name)
-    return render_template('Person_Page.html', nodes=json.dumps(nodes), edges=json.dumps(edges))
+    return render_template('Person_Page.html', nodes=json.dumps(nodes), edges=json.dumps(edges), login_name=login_name)
+
+
+@app.route('/All_Show_Page/<login_name>', methods=['POST', 'GET'])
+def All_Show_Page(login_name):
+    nodes, edges = get_all_graph(login_name)
+    return render_template('All_Show_Page.html', nodes=json.dumps(nodes), edges=json.dumps(edges), login_name=login_name)
+
+
+@app.route('/QA_Relation/<login_name>', methods=['POST', 'GET'])
+def QA_Relation(login_name):
+    if request.method == 'POST':
+        if request.form['question'] != '':
+            return redirect(url_for('QA_Relation_Search', question=request.form['question'], login_name=login_name))
+    return render_template('QA_Relation_Page.html', login_name=login_name)
+
+
+@app.route('/QA_Relation_Search/<question>, <login_name>', methods=['POST', 'GET'])
+def QA_Relation_Search(question, login_name):
+    class_result, search_name = Classfy_Question(question)
+    nodes = []
+    edges = []
+    if class_result == 0:
+        nodes, edges = get_ques_graph_0(login_name, search_name)
+    elif class_result == 1:
+        nodes, edges = get_ques_graph_1(search_name)
+    elif class_result == 2:
+        nodes, edges = get_ques_graph_2(search_name)
+    return render_template('QA_Relation_Page.html', login_name=login_name,
+                           nodes=json.dumps(nodes), edges=json.dumps(edges))
+
+
+@app.route('/KGQA_Page/<login_name>', methods=['POST', 'GET'])
+def KGQA_Page(login_name):
+    quiz = request.form.get('quiz')
+    if quiz == None:
+        return render_template('KGQA_Page.html', login_name=login_name, login_name_=json.dumps(login_name))
+    result = KGQA_Answer(quiz)
+    if result:
+        answer = result
+    else:
+        answer = quiz + '???'
+    return jsonify({'answer': answer})
 
 
 def get_graph(login_name):
-    nodes = list(map(buildNodes, graph.data("Match(n:Org_Group{Name:'%s'})-[r]-(p) return n" %(login_name))))
-    edges = list(map(buildEdges, graph.data("Match(n:Org_Group{Name:'%s'})-[r]-(p) return r" %(login_name))))
+    graph_data = graph.data("Match(n:Volunteer{name:'%s'})-[r]-(p) return n,r,p" % (login_name))
+    nodesn_ = list(map(buildNodesn, graph_data))
+    nodesn = []
+    for node in nodesn_:
+        if node not in nodesn:
+            nodesn.append(node)
+    nodesp = list(map(buildNodesp, graph_data))
+    for node_list in nodesp:
+        for node in node_list:
+            if node not in nodesn:
+                nodesn.append(node)  # 查询出的结果去重
+    edges = []
+    edger = list(map(buildEdgesn, graph_data))
+    for edge_list in edger:
+        for edge in edge_list:
+            if edge not in edges:
+                edges.append(edge)
+    # nodesn_ = list(map(buildNodesn, graph.data("Match(n:Volunteer{name:'%s'})-[r]-(p) return n" % (login_name))))
+    # nodesn = []
+    # for node in nodesn_:
+    #     if node not in nodesn:
+    #         nodesn.append(node)
+    # nodesp = list(map(buildNodesp, graph.data("Match(n:Volunteer{name:'%s'})-[r]-(p) return p" % (login_name))))
+    # nodes = nodesn + nodesp
+    # edges = list(map(buildEdgesn, graph.data("Match(n:Volunteer{name:'%s'})-[r]-(p) return r" %(login_name))))
+    return nodesn, edges
+
+
+def get_all_graph(login_name):
+    graph_data = graph.data("match (n1:Volunteer{name:'%s'})-[r1]-(p1)-[r2]-(n2:Volunteer)"
+                            "-[r3]-(p2:Group)-[l1]-(p3:City)-[l2]-(p4:Province) "
+                            "return n1,n2,p1,p2,p3,p4,l1,l2,r1,r2,r3" % (login_name))
+    nodesn_ = list(map(buildNodesn, graph_data))
+    nodesn = []
+    for node in nodesn_:
+        if node not in nodesn:
+            nodesn.append(node)  # 查询出的结果去重
+    nodesp = list(map(buildNodesp, graph_data))
+    for node_list in nodesp:
+        for node in node_list:
+            if node not in nodesn:
+                nodesn.append(node)  # 查询出的结果去重
+    edger = list(map(buildEdgesn, graph_data))
+    edgesr = []
+    for edge_list in edger:
+        for edge in edge_list:
+            if edge not in edgesr:
+                edgesr.append(edge)
+    edger = list(map(buildEdges, graph_data))
+    for edge_list in edger:
+        for edge in edge_list:
+            if edge not in edgesr:
+                edgesr.append(edge)
+    # nodesn_ = list(map(buildNodesn, graph.data("match (n:Volunteer{name:'%s'})-[*1..2]-(:Volunteer)"
+    #                                            "-[]-(:Group)-[]-(:City)-[]-(:Province) return n" %(login_name))))
+    # nodesn = []
+    # for node in nodesn_:
+    #     if node not in nodesn:
+    #         nodesn.append(node)     # 查询出的结果去重
+    # nodesn_ = list(map(buildNodesn, graph.data("match (:Volunteer{name:'%s'})-[*1..2]-(n:Volunteer)"
+    #                                            "-[]-(:Group)-[]-(:City)-[]-(:Province) return n" %(login_name))))
+    # for node in nodesn_:
+    #     if node not in nodesn:
+    #         nodesn.append(node)     # 查询出的结果去重
+    # nodesn_ = list(map(buildNodesp, graph.data("match (:Volunteer{name:'%s'})-[*1..2]-(:Volunteer)"
+    #                                            "-[]-(p:Group)-[]-(:City)-[]-(:Province) return p" % (login_name))))
+    # for node in nodesn_:
+    #     if node not in nodesn:
+    #         nodesn.append(node)  # 查询出的结果去重
+    # nodesn_ = list(map(buildNodesp, graph.data("match (:Volunteer{name:'%s'})-[]-(p) return p" % (login_name))))
+    # for node in nodesn_:
+    #     if node not in nodesn:
+    #         nodesn.append(node)  # 查询出的结果去重
+    # nodesn_ = list(map(buildNodesp, graph.data("match (:Volunteer{name:'%s'})-[*1..2]-(:Volunteer)"
+    #                                            "-[]-(:Group)-[]-(p:City)-[]-(:Province) return p" % (login_name))))
+    # for node in nodesn_:
+    #     if node not in nodesn:
+    #         nodesn.append(node)  # 查询出的结果去重
+    # nodesn_ = list(map(buildNodesp, graph.data("match (:Volunteer{name:'%s'})-[*1..2]-(:Volunteer)"
+    #                                            "-[]-(:Group)-[]-(:City)-[]-(p:Province) return p" % (login_name))))
+    # for node in nodesn_:
+    #     if node not in nodesn:
+    #         nodesn.append(node)  # 查询出的结果去重
+    # edger = list(map(buildEdgesn, graph.data("match (n:Volunteer{name:'%s'})-[r]-() return r" %(login_name))))
+    # edgesr = []
+    # for edge in edger:
+    #     if edge not in edgesr:
+    #         edgesr.append(edge)
+    # edger = list(map(buildEdgesn, graph.data("match (:Volunteer{name:'%s'})-[]-()-[r]-(:Volunteer)"
+    #                                          "-[]-(:Group)-[]-(:City)-[]-(:Province) return r" % (login_name))))
+    # for edge in edger:
+    #     if edge not in edgesr:
+    #         edgesr.append(edge)
+    # edger = list(map(buildEdgesn, graph.data("match (:Volunteer{name:'%s'})-[*1..2]-(:Volunteer)"
+    #                                          "-[r]-(:Group)-[]-(:City)-[]-(:Province) return r" % (login_name))))
+    # for edge in edger:
+    #     if edge not in edgesr:
+    #         edgesr.append(edge)
+    # edger = list(map(buildEdges, graph.data("match (:Volunteer{name:'%s'})-[*1..2]-(:Volunteer)"
+    #                                         "-[]-(:Group)-[r]-(:City)-[]-(:Province) return r" % (login_name))))
+    # for edge in edger:
+    #     if edge not in edgesr:
+    #         edgesr.append(edge)
+    # edger = list(map(buildEdges, graph.data("match (:Volunteer{name:'%s'})-[*1..2]-(:Volunteer)"
+    #                                         "-[]-(:Group)-[]-(:City)-[r]-(:Province) return r" % (login_name))))
+    # for edge in edger:
+    #     if edge not in edgesr:
+    #         edgesr.append(edge)
+    # print(edgesr)
+    return nodesn, edgesr
+
+
+def get_ques_graph_0(login_name, search_name):
+    graph_data = graph.data("match r=shortestPath((n:Volunteer{name:'%s'})-[*]-"
+                            "(p:Volunteer{name:'%s'})) return r" % (login_name, search_name))
+    nodes = []
+    edges = []
+    for path in graph_data:
+        nodes = list(map(buildNodes, path['r'].nodes()))
+        edges = list(map(BuildEdges, path['r'].relationships()))
+    return nodes, edges
+
+
+def get_ques_graph_1(search_name):
+    graph_data = graph.data("Match r=(:Volunteer{name:'%s'})-[]-(:Group) return r" % (search_name))
+    nodes = []
+    edges = []
+    for path in graph_data:
+        for node in list(map(buildNodes, path['r'].nodes())):
+            if node not in nodes:
+                nodes.append(node)
+        for edge in list(map(BuildEdges, path['r'].relationships())):
+            if edge not in edges:
+                edges.append(edge)
+    return nodes, edges
+
+
+def get_ques_graph_2(search_name):
+    graph_data = graph.data("Match r=(:Volunteer{name:'%s'})-[]-(:Project) return r" % (search_name))
+    nodes = []
+    edges = []
+    for path in graph_data:
+        for node in list(map(buildNodes, path['r'].nodes())):
+            if node not in nodes:
+                nodes.append(node)
+        for edge in list(map(BuildEdges, path['r'].relationships())):
+            if edge not in edges:
+                edges.append(edge)
     return nodes, edges
 
 
@@ -239,31 +430,145 @@ def ReadBJMap():
     timeline.add(bar_vol, '志愿者')
     timeline.add(bar_org, '志愿团体')
     timeline.add(bar_uni, '高校志愿')
-    return Province_BJ, opp_BJ, org_BJ, BJ_to_Other, Other_to_BJ, timeline
+
+    timeline_uni = Timeline(is_auto_play=True, timeline_bottom=0, width='100%', height='100%')
+    for i in range(2011, 2019):
+        vol_num = []
+        opp_hour = []
+        opp_num = []
+        university = []
+        hour_min = 7000000
+        hour_max = 0
+        with open('data/BJ_高校每年项目及时长统计.csv', 'r', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                if int(row[0]) == i:
+                    opp_num.append(int(row[4]))
+                    opp_hour.append(int(row[3]))
+                    university.append(row[2])
+                    if int(row[3]) < hour_min:
+                        hour_min = int(row[3])
+                    if int(row[3]) > hour_max:
+                        hour_max = int(row[3])
+        with open('data/BJ_高校每年新增志愿者数.csv', 'r', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            for row in reader:  # 必须这个在前，一个open只能这么循环一次
+                for uni in university:
+                    if int(row[0]) == i and row[2] == uni:
+                        vol_num.append(int(row[3]))
+        scatter = Scatter("%s年高校统计" % i)
+        for uni in university:
+            lab = university.index(uni)
+            scatter.add(uni, [opp_num[lab]], [vol_num[lab]], extra_data=[opp_hour[lab]],
+                        symbol_size=opp_hour[lab]/hour_max*70, is_legend_show=False, tooltip_formatter="{a}:{c}")
+        timeline_uni.add(scatter, '%s' % i)
+    return Province_BJ, opp_BJ, org_BJ, BJ_to_Other, Other_to_BJ, timeline, timeline_uni
 
 
 def buildNodes(nodeRecord):
+    pattern = re.compile('.*?Id', re.S)  # 正则匹配关系
+    id = ''
+    for k in nodeRecord.keys():
+        if len(re.findall(pattern, k)) > 0:
+            id = k
+    label = str(nodeRecord.labels())   # 取出标签，若存在“‘***’”这样的嵌套则传数据会崩
+    name = str(nodeRecord['name']) + '_' + str(nodeRecord[id])
+    data = {"category": label[10:-3], "symbolSize": 30, "name": name}   # Echarts
+    return data
+
+
+def buildNodesn(nodeRecord):    # nodeRecord 是一个字典
     # print(str(nodeRecord['n'].labels()) == "SetView({'Org_Group'})")    # 用来之后固定查询语句
-    label = str(nodeRecord['n'].labels())   # 取出标签，若存在“‘***’”这样的嵌套则传数据会崩
-    data = {"label": label[10:-3]}
-    data.update(nodeRecord['n'].properties)
-    # data = {"label": str(nodeRecord['p'].labels())}
-    # data.update(nodeRecord['p'].properties)
-    return {'data': data}
+    pattern = re.compile('n.*?', re.S)  # 正则匹配关系
+    data = {}
+    for k in nodeRecord.keys():
+        l = re.findall(pattern, k)
+        if len(l) > 0:
+            label = str(nodeRecord[k].labels())   # 取出标签，若存在“‘***’”这样的嵌套则传数据会崩
+            name = str(nodeRecord[k]['name']) + '_' + str(nodeRecord[k]['volunteerId'])
+            data = {"category": label[10:-3], "symbolSize": 30, "name": name}   # Echarts
+    # data = {"label": label[10:-3]}    # Cytoscape
+    # data = {"category": label[10:-3], "symbolSize": 20}  # Echarts
+    # data.update(nodeRecord['n'].properties)
+    # return {'data': data} #Cytoscape
+    return data
+
+
+def buildNodesp(nodeRecord):
+    pattern = re.compile('p.*?', re.S)  # 正则匹配关系
+    data = []
+    node = {}
+    for k in nodeRecord.keys():
+        l = re.findall(pattern, k)
+        if len(l) > 0:
+            label = str(nodeRecord[k].labels())   # 取出标签，若存在“‘***’”这样的嵌套则传数据会崩
+            node = {"category": label[10:-3], "symbolSize": 20}   # Echarts
+            node.update(nodeRecord[k].properties)
+            data.append(node)
+    return data
+
+
+def BuildEdges(relationRecord):
+    relationships = str(relationRecord)
+    pattern = re.compile('.*?-\[:(.*?) \{.*?', re.S)    # 正则匹配关系
+    relationship = re.findall(pattern, relationships)
+    patterns = re.compile('.*?Id', re.S)  # 正则匹配关系
+    sid = ''
+    eid = ''
+    for k in relationRecord.start_node().keys():
+        if len(re.findall(patterns, k)) > 0:
+            sid = k
+    source = relationRecord.start_node()['name'] + '_' + relationRecord.start_node()[sid]
+    for k in relationRecord.end_node().keys():
+        if len(re.findall(patterns, k)) > 0:
+            eid = k
+    target = relationRecord.end_node()['name'] + '_' + relationRecord.end_node()[eid]
+    edge = {"source": source,
+            "target": target,
+            "value": relationship[0]}
+    return edge
+
+
+def buildEdgesn(relationRecord):
+    patternr = re.compile('r.*?', re.S)  # 正则匹配关系
+    edge = {}
+    data = []
+    for k in relationRecord.keys():
+        l = re.findall(patternr, k)
+        if len(l) > 0:
+            relationships = str(relationRecord[k])
+            pattern = re.compile('.*?-\[:(.*?) \{.*?', re.S)    # 正则匹配关系
+            relationship = re.findall(pattern, relationships)
+            source = relationRecord[k].start_node()['name'] + '_' + relationRecord[k].start_node()['volunteerId']
+            target = relationRecord[k].end_node()['name']
+            edge = {"source": source,
+                    "target": target,
+                    "value": relationship[0]}
+            data.append(edge)
+    # return {'data': data} #Cytoscape
+    return data
 
 
 def buildEdges(relationRecord):
-    source = relationRecord['r'].start_node()['Name']
-    target = relationRecord['r'].end_node()
-    print(source)
-    print(target)
-    data = {"source": str(relationRecord['r'].start_node()),
-            "target": str(relationRecord['r'].end_node()),
-            "relationship": relationRecord['r'].relationships()}
-    return {'data': data}
+    patternr = re.compile('l.*?', re.S)  # 正则匹配关系
+    data = []
+    edge = {}
+    for k in relationRecord.keys():
+        l = re.findall(patternr, k)
+        if len(l) > 0:
+            relationships = str(relationRecord[k])
+            pattern = re.compile('.*?-\[:(.*?) \{.*?', re.S)    # 正则匹配关系
+            relationship = re.findall(pattern, relationships)
+            source = relationRecord[k].start_node()['name']
+            target = relationRecord[k].end_node()['name']
+            edge = {"source": source,
+                    "target": target,
+                    "value": relationship[0]}
+            data.append(edge)
+    # return {'data': data} #Cytoscape
+    return data
 
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 

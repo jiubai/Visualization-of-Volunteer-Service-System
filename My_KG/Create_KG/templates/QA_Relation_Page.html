@@ -2,7 +2,7 @@
 <html lang="en" style="overflow: hidden">
 <head>
     <meta charset="UTF-8">
-    <title>Person_Page</title>
+    <title>QA_Relation_Page</title>
     <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
     <link rel="stylesheet" href="../static/css/nifty.min.css"/>
     <link rel="stylesheet" href="../static/css/nifty-demo-icons.min.css"/>
@@ -37,18 +37,18 @@
         <div class="boxed">
             <div id="content-container">
                 <div id="page-content">
-					<h3 class="text-main pad-btm bord-btm">个人/检索结果-关系可视化</h3>
+					<h3 class="text-main pad-btm bord-btm">志愿者关系问答</h3>
                     <div class="row">
-                        <div class="col-lg-6"></div>
-                        <div class="col-lg-2"></div>
                         <div class="col-lg-4">
-                            <form action="/Login" id="lg-form" name="lg-form" method="post">
+                            <form action="{{ url_for('QA_Relation', login_name='') }}{{login_name}}" id="lg-form" name="lg-form" method="post">
                                 <div class="input-group">
-                                    <input type="text" name="username" id="username" class="form-control input-lg" placeholder="请输入你要检索的志愿者..."/>
+                                    <input type="text" name="question" id="question" class="form-control input-lg" placeholder="请输入您的问题..."/>
                                     <button class="input-group-addon btn btn-mint" type="submit" id="login">搜索</button>
                                 </div>
                             </form>
                         </div>
+                        <div class="col-lg-6"></div>
+                        <div class="col-lg-2"></div>
                     </div>
                     <div class="row" style="height: 40px;"></div>
                     <div class="row" >

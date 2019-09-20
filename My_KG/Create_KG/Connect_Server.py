@@ -3,8 +3,8 @@
 from py2neo import Graph
 
 graph = Graph(
-    "http://localhost:7474",
+    "http://10.117.62.253:7474",
     username="neo4j",
-    password="volun"
+    password="wspn"     # "volun"
 )
 

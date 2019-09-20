@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" style="overflow: hidden">
+<head>
+    <meta charset="UTF-8">
+    <title>KGQA_Page</title>
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="../static/css/nifty.min.css"/>
+    <link rel="stylesheet" href="../static/css/nifty-demo-icons.min.css"/>
+    <link rel="stylesheet" href="../static/css/font-awesome.min.css"/>
+    <link href='http://fonts.googleapis.com/css?family=Oleo+Script' rel='stylesheet' type='text/css'>
+    <link rel="shortcut icon" href="../static/img/logotop.jpg">
+    <script src="../static/js/jquery-3.3.1.min.js"></script>
+    <script src="../static/js/cytoscape.min.js"></script>
+    <script src="../static/js/echarts.min.js"></script>
+    <script src="../static/js/nifty.min.js"></script>
+    <style type="text/css">
+        .talk_con{
+            width:600px;
+            height:500px;
+            border:1px solid #666;
+            margin:50px auto 0;
+            background:#f9f9f9;
+        }
+        .talk_show{
+            width:580px;
+            height:420px;
+            border:1px solid #666;
+            background:#fff;
+            margin:10px auto 0;
+            overflow:auto;
+        }
+        .talk_input{
+            width:660px;
+            margin:10px auto 0;
+        }
+        .whotalk{
+            width:80px;
+            height:30px;
+            float:left;
+            outline:none;
+        }
+        .talk_word{
+            width:500px;
+            height:50px;
+            padding:0px;
+            float:left;
+            margin-left:10px;
+            outline:none;
+            text-indent:10px;
+        }
+        .talk_sub{
+            width:60px;
+            height:50px;
+            float:left;
+            margin-left:10px;
+        }
+        .atalk{
+           margin:10px;
+        }
+        .atalk span{
+            display:inline-block;
+            background:#0181cc;
+            border-radius:10px;
+            color:#fff;
+            padding:5px 10px;
+        }
+        .btalk{
+            margin:10px;
+            text-align:right;
+        }
+        .btalk span{
+            display:inline-block;
+            background:#ef8201;
+            border-radius:10px;
+            color:#fff;
+            padding:5px 10px;
+        }
+    </style>
+</head>
+<body background="../static/img/3.jpg"
+      style="background-size: cover; font-family: 'Oleo Script', cursive;">
+    <div id="container" class="effect aside-float aside-bright mainnav-lg">
+        <header class="navbar navbar-inverse" role="navigation" style="background: #78828c;">
+            <div class="container-fluid boxed">
+                <div>
+                    <a style="font-size: 1.25rem" href="{{ url_for('Main_Show') }}">
+                        <img src="../static/img/logo.jpg" alt="Logo">
+                        <span class="font-weight-bold" style="color: #e9ecef;">首页_玖</span>
+                    </a>
+                </div>
+                <div>
+                    <ul class="nav navbar-top-links pull-left">
+                        <li class="tgl-menu-btn">
+                            <a class="mainnav-toggle" href="#"><i class="demo-pli-view-list"></i></a></li>
+                    </ul>&emsp;
+                    <span id="show_time" class="navbar-text" style="color: #e9ecef; font-size: 1rem"></span>
+                </div>
+            </div>
+        </header>
+        <div class="boxed">
+            <div id="content-container">
+                <div id="page-content">
+					<h3 class="text-main pad-btm bord-btm">志愿知识问答</h3>
+                    <div class="row">
+                        <div class="col-lg-2"></div>
+                        <div class="col-lg-8" style="height: 600px;">
+                            <div class="talk_con">
+                                <div class="talk_show" id="words">
+                                    <div class="atalk"><span id="asay">我是志愿服务问答机器人，我可以回答你一些志愿领域简单的问题。</span></div>
+                                </div>
+                                <div class="talk_input">
+                                    <input type="text" class="talk_word" id="talkwords">
+                                    <input type="button" value="发送" class="input-group-addon btn btn-mint talk_sub" id="talksub">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-2"></div>
+                    </div>
+                </div>
+            </div>
+            <nav id="mainnav-container">
+                <div id="mainnav">
+                    <div id="mainnav-menu-wrap">
+                        <div class="nano">
+                            <div class="nano-content">
+                                <ul id="mainnav-menu" class="list-group">
+						            <li class="list-header"> 个人/检索-关系可视化</li>
+                                    <li>
+                                        <a href="{{ url_for('Person_Page', login_name='') }}{{login_name}}">
+                                            <i class="fa fa-search" style="width:24px"></i>
+                                            <span class="menu-title">
+                                                <strong>个人/检索-关系</strong>
+                                            </span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('All_Show_Page', login_name='') }}{{login_name}}">
+                                            <i class="fa fa-pie-chart" style="width:24px"></i>
+                                            <span class="menu-title">
+                                                <strong>志愿者关系全貌</strong>
+                                            </span>
+                                        </a>
+                                    </li>
+						            <li class="list-divider"></li>
+						            <li class="list-header">问答系统</li>
+						            <li >
+						                <a href="{{ url_for('QA_Relation', login_name='') }}{{login_name}}">
+						                    <i class="fa fa-question-circle" style="width:24px"></i>
+                                            <span class="menu-title"><strong>人物关系问答</strong></span>
+						                </a>
+                                        <a href="{{ url_for('KGQA_Page', login_name='') }}{{login_name}}">
+						                    <i class="fa fa-question-circle" style="width:24px"></i>
+                                            <span class="menu-title"><strong>知识问答</strong></span>
+						                </a>
+						            </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+        <footer id="footer">
+            <p class="pad-lft">Copyright&#0169; 2019 玖佰  &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;All Rights Reserved </p>
+        </footer>
+    </div>
+    <!--Cytoscape图谱展示-->
+    <!--<script type="text/javascript">-->
+        <!--var nodes = eval('{{nodes|safe}}');-->
+        <!--var edges = eval('{{edges|safe}}');-->
+        <!--var style = [-->
+            <!--{ selector: 'node[label = "Volunteer"]', css: {'background-color': '#fc534e', 'content': 'data(name)'}},-->
+            <!--{ selector: 'node[label = "GroupU"]', css: {'background-color': '#7c7cfc', 'content': 'data(name)'}},-->
+            <!--{ selector: 'node[label = "Group"]', css: {'background-color': '#59fc90', 'content': 'data(name)'}},-->
+            <!--{ selector: 'node[label = "University"]', css: {'background-color': '#f7fc50', 'content': 'data(name)'}},-->
+            <!--{ selector: 'node[label = "Province"]', css: {'background-color': '#9a084f', 'content': 'data(name)'}},-->
+            <!--{ selector: 'node[label = "Project"]', css: {'background-color': '#67105b', 'content': 'data(name)'}},-->
+            <!--{ selector: 'node[label = "City"]', css: {'background-color': '#78828c', 'content': 'data(name)'}},-->
+            <!--{ selector: 'edge', css: {'content': 'data(relationship)', 'target-arrow-shape': 'triangle'}}];-->
+
+        <!--var Person_Relation = cytoscape({-->
+            <!--container: document.getElementById('Person_Relation'),-->
+            <!--style: style,-->
+            <!--layout: { name: 'grid' },-->
+            <!--elements: {'nodes': nodes, 'edges': edges}-->
+        <!--});-->
+    <!--</script>-->
+
+    <script type="text/javascript">
+        var login_name = eval('{{login_name_|safe}}');
+        window.onload = function(){
+            var Words = document.getElementById("words");
+            var TalkWords = document.getElementById("talkwords");
+            var TalkSub = document.getElementById("talksub");
+
+            TalkSub.onclick = function(){
+	            //定义空字符串
+                var str = "";
+                if(TalkWords.value == ""){
+	                 // 消息为空时弹窗
+                    alert("消息不能为空");
+                    return;
+                }
+                $.ajax({
+                    url:'/KGQA_Page/' + login_name,
+                    type:'POST',
+
+                    data:{'quiz': TalkWords.value},
+                    dataType: 'json',
+                    success:function(data){
+                        // alert(JSON.stringify(data['answer']));
+                        answer = JSON.stringify(data['answer']).replace("\"","").replace("\"","");
+                        str_a = '<div class="atalk"><span>'+ answer +'</span></div>';
+                        Words.innerHTML = Words.innerHTML + str_a;
+                    }
+                });
+                str_q = '<div class="btalk"><span>'+ TalkWords.value +'</span></div>';
+                TalkWords.value = '';
+                Words.innerHTML = Words.innerHTML + str_q;
+            }
+        }
+    </script>
+    <script>  
+        //这里代码多了几行，但是不会延迟显示，速度比较好，格式可以自定义，是理想的时间显示
+        setInterval("fun(show_time)",1);
+        function fun(timeID){ 
+            var date = new Date();  //创建对象  
+            var y = date.getFullYear();     //获取年份  
+            var m =date.getMonth()+1;   //获取月份  返回0-11  
+            var d = date.getDate(); // 获取日  
+            var ww = ' 星期'+'日一二三四五六'.charAt(new Date().getDay()) ;//星期几
+            var h = date.getHours();  //时
+            var minute = date.getMinutes()  //分
+            var s = date.getSeconds(); //秒
+            var sss = date.getMilliseconds() ; //毫秒
+            if(m<10){m = "0"+m;}
+            if(d<10){d = "0"+d;}
+            if(h<10){h = "0"+h;}
+            if(minute<10){minute = "0"+minute;}
+            document.getElementById(timeID.id).innerHTML =  y+"-"+m+"-"+d+"  "+h+":"+minute+"  "+ww;
+          }
+    </script> 
+</body>
+</html>

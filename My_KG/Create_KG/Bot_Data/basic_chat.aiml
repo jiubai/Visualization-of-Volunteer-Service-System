@@ -1,0 +1,16 @@
+<aiml encoding="UTF-8" version="0.9.2">
+
+    <category>
+        <pattern>你好*</pattern>
+        <template>
+            你好, 我可以简单回答你一些志愿方面的问题。
+        </template>
+    </category>
+
+    <category>
+        <pattern>你是*</pattern>
+        <template>
+            对啊，我是<set name="name"><star /></set>!
+        </template>
+    </category>
+</aiml>
